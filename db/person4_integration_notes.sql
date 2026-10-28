@@ -1,0 +1,8 @@
+-- Run after Person 1's schema.sql and after the shared domain tables exist.
+-- Person 4's ORM maps the user_account, issue, blood_unit and request tables from the project plan.
+-- The issue table should enforce one physical unit per issue:
+-- ALTER TABLE issue ADD CONSTRAINT uq_unit_single_issue UNIQUE (bank_id, unit_id);
+-- Recommended report index:
+-- CREATE INDEX idx_issue_req ON issue(request_id);
+-- Recommended FEFO index from the plan:
+-- CREATE INDEX idx_unit_fefo ON blood_unit (blood_group, component_type, status, expiry_date);
