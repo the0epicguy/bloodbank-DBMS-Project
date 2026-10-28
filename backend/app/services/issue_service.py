@@ -4,10 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from app.models.domain import BloodUnit, Request, Hospital, Recipient, BloodBank
 from app.models.issue import Issue
+from app.repositories.issue_repo import IssueRepository
 from app.core.compatibility import compatible_groups
 
 async def _refresh_request_status(db: AsyncSession, request: Request) -> int:
-    issued = await db.scalar(select(func.count(Issue.issue_id)).where(Issue.request_id == request.request_id)) or 0
+    issued = await IssueRepository.count_by_request(db, request.request_id)
     if issued >= request.quantity:
         request.status = "FULFILLED"
     elif issued > 0:

@@ -33,16 +33,5 @@ async def issue_manual(payload: ManualIssueRequest, db: AsyncSession = Depends(g
 @router.get("/issues", response_model=list[dict])
 async def issue_log(skip: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=500),
                     db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    stmt = select(Issue, Request, BloodUnit, Hospital, Recipient, BloodBank).join(
-        Request, Request.request_id == Issue.request_id
-    ).join(BloodUnit, (BloodUnit.bank_id == Issue.bank_id) & (BloodUnit.unit_id == Issue.unit_id)
-    ).join(Hospital, Hospital.hospital_id == Request.hospital_id
-    ).join(Recipient, Recipient.recipient_id == Request.recipient_id
-    ).join(BloodBank, BloodBank.bank_id == Issue.bank_id).order_by(desc(Issue.issue_date)).offset(skip).limit(limit)
-    rows = (await db.execute(stmt)).all()
-    return [{"issue_id": i.issue_id, "request_id": i.request_id, "bank_id": i.bank_id, "unit_id": i.unit_id,
-             "issue_date": i.issue_date.isoformat() if i.issue_date else None, "quantity_issued": i.quantity_issued,
-             "notes": i.notes, "blood_group": u.blood_group, "component_type": u.component_type,
-             "expiry_date": str(u.expiry_date), "bank_name": b.name, "hospital_name": h.name,
-             "recipient_name": rec.name, "urgency": r.urgency}
-            for i, r, u, h, rec, b in rows]
+    from app.repositories.issue_repo import IssueRepository
+    return await IssueRepository.get_audit_log(db, skip, limit)
