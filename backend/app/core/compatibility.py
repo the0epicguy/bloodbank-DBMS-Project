@@ -1,4 +1,5 @@
 """
+﻿"""
 core/compatibility.py
 =====================
 ABO / Rh Transfusion Compatibility Engine.
@@ -7,6 +8,7 @@ Medical rules:
   - RBC / Whole Blood: donor antigens must be absent from recipient's plasma.
     Universal donor = O-  | Universal recipient = AB+
   - Plasma:           reverse ABO logic — donor antibodies must not attack recipient.
+  - Plasma:           reverse ABO logic ΓÇö donor antibodies must not attack recipient.
     Universal donor = AB+ | Universal recipient = O-
   - Platelets:        preferably same group; falls back to RBC compatibility.
 
@@ -14,6 +16,7 @@ Usage:
     from app.core.compatibility import get_compatible_donor_groups
     groups = get_compatible_donor_groups(BloodGroup.A_POS, ComponentType.RBC)
     # → ["O-", "O+", "A-", "A+"]
+    # ΓåÆ ["O-", "O+", "A-", "A+"]
 """
 
 from app.core.enums import BloodGroup, ComponentType
@@ -21,6 +24,7 @@ from app.core.enums import BloodGroup, ComponentType
 
 # ---------------------------------------------------------------------------
 # Raw compatibility tables (recipient → list of compatible donor groups)
+# Raw compatibility tables (recipient ΓåÆ list of compatible donor groups)
 # ---------------------------------------------------------------------------
 
 # RBC and Whole Blood: standard donor-to-recipient compatibility
@@ -43,6 +47,8 @@ _RBC_COMPAT: dict[BloodGroup, list[BloodGroup]] = {
 
 # Plasma: reverse ABO — recipient needs plasma without anti-A or anti-B antibodies
 # AB+ plasma (no antibodies) → universal donor.  O- plasma → only for O-.
+# Plasma: reverse ABO ΓÇö recipient needs plasma without anti-A or anti-B antibodies
+# AB+ plasma (no antibodies) ΓåÆ universal donor.  O- plasma ΓåÆ only for O-.
 _PLASMA_COMPAT: dict[BloodGroup, list[BloodGroup]] = {
     BloodGroup.O_NEG:  [BloodGroup.O_NEG, BloodGroup.O_POS,
                         BloodGroup.A_NEG, BloodGroup.A_POS,
@@ -107,6 +113,7 @@ def is_compatible(
 def build_full_matrix() -> dict[tuple[BloodGroup, ComponentType], list[BloodGroup]]:
     """
     Build and return the full (recipient_group, component) → [donor_groups] matrix.
+    Build and return the full (recipient_group, component) ΓåÆ [donor_groups] matrix.
     Useful for test coverage verification.
     """
     matrix: dict[tuple[BloodGroup, ComponentType], list[BloodGroup]] = {}

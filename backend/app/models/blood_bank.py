@@ -1,6 +1,5 @@
 """
 models/blood_bank.py
-====================
 SQLAlchemy ORM model for the `blood_bank` table.
 Person 2 owns this model.
 """
@@ -10,6 +9,14 @@ from datetime import datetime
 from sqlalchemy import DateTime, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+BloodBank ORM model.
+
+Maps to the `blood_bank` table in MySQL.
+Defined here so the Donor → BloodUnit → BloodBank relationship chain works.
+"""
+
+from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
@@ -33,3 +40,13 @@ class BloodBank(Base):
         cascade="all, delete-orphan",
         lazy="select",
     )
+    bank_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    address = Column(Text, nullable=False)
+    contact = Column(String(20), nullable=False)
+
+    # Relationship: one bank → many blood units
+    blood_units = relationship("BloodUnit", back_populates="bank", lazy="select")
+
+    def __repr__(self):
+        return f"<BloodBank(id={self.bank_id}, name='{self.name}')>"
