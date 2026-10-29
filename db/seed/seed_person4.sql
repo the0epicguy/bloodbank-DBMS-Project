@@ -1,10 +1,3 @@
--- =====================================================
--- Person 4 demo data: sample blood requests so the
--- dashboard, FEFO allocation and issue log have something to show.
--- Run AFTER seed_data.sql and 002_person4_auth_issues.sql.
--- Demo users need no seeding: POST /auth/demo-login/{role} creates them.
--- =====================================================
-
 USE bloodbank;
 
 INSERT INTO request (hospital_id, recipient_id, component_type, quantity, urgency, request_date, status) VALUES

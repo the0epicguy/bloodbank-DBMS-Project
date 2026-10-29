@@ -1,14 +1,5 @@
--- =====================================================
--- Blood Bank Management System - Seed Data
--- Inserts sample data for development and testing
--- 10 blood banks, 10 hospitals, 50 donors, 100 blood units
--- =====================================================
-
 USE bloodbank;
 
--- =====================================================
--- BLOOD BANKS (10 records)
--- =====================================================
 INSERT INTO blood_bank (name, address, contact) VALUES
 ('City Blood Centre',         '12 MG Road, Pune',             '020-25551234'),
 ('Red Cross Blood Bank',      '45 FC Road, Pune',             '020-25557890'),
@@ -21,9 +12,6 @@ INSERT INTO blood_bank (name, address, contact) VALUES
 ('Care Blood Centre',         '90 Hadapsar, Pune',            '020-25554567'),
 ('People Blood Bank',         '11 Aundh, Pune',               '020-25558901');
 
--- =====================================================
--- HOSPITALS (10 records)
--- =====================================================
 INSERT INTO hospital (name, address, contact) VALUES
 ('Sahyadri Hospital',          '30 Karve Road, Pune',         '020-67211111'),
 ('Ruby Hall Clinic',           '40 Sassoon Road, Pune',       '020-26163391'),
@@ -36,10 +24,6 @@ INSERT INTO hospital (name, address, contact) VALUES
 ('Noble Hospital',             'Hadapsar, Pune',              '020-67005000'),
 ('Aditya Birla Hospital',      'Chinchwad, Pune',             '020-30717171');
 
--- =====================================================
--- DONORS (50 records)
--- Mix of blood groups, realistic DOBs and phone numbers
--- =====================================================
 INSERT INTO donor (name, blood_group, phone, dob, last_donation_date) VALUES
 ('Aarav Sharma',       'A+',  '9876543201', '1995-03-15', '2026-07-10'),
 ('Vivaan Patel',       'B+',  '9876543202', '1990-08-22', '2026-06-15'),
@@ -92,13 +76,8 @@ INSERT INTO donor (name, blood_group, phone, dob, last_donation_date) VALUES
 ('Soham Naik',         'AB-', '9876543249', '1988-11-26', NULL),
 ('Tejas Doshi',        'A+',  '9876543250', '1991-06-09', '2026-07-25');
 
--- =====================================================
--- BLOOD UNITS (100 records)
--- Spread across 10 banks, various blood groups and components
--- unit_id is per-bank (1,2,3... for each bank)
--- =====================================================
 INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, blood_group, component_type, collection_date, expiry_date, status) VALUES
--- Bank 1 (10 units)
+
 (1, 1,  1, 450, '2026-07-10', 'A+',  'WHOLE_BLOOD', '2026-07-10', '2026-08-14', 'EXPIRED'),
 (1, 2,  2, 450, '2026-06-15', 'B+',  'RBC',         '2026-06-15', '2026-07-20', 'EXPIRED'),
 (1, 3,  3, 200, '2026-08-01', 'O+',  'PLATELETS',   '2026-08-01', '2026-08-06', 'EXPIRED'),
@@ -110,7 +89,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (1, 9, 14, 200, '2026-07-05', 'AB+', 'PLATELETS',   '2026-07-05', '2026-07-10', 'EXPIRED'),
 (1,10, 15, 450, '2026-09-10', 'O-',  'RBC',         '2026-09-10', '2026-10-15', 'AVAILABLE'),
 
--- Bank 2 (10 units)
 (2, 1, 17, 450, '2026-05-30', 'B+',  'WHOLE_BLOOD', '2026-05-30', '2026-07-04', 'EXPIRED'),
 (2, 2, 18, 450, '2026-08-20', 'O+',  'RBC',         '2026-08-20', '2026-09-24', 'AVAILABLE'),
 (2, 3, 20, 250, '2026-06-10', 'A-',  'PLASMA',      '2026-06-10', '2027-06-10', 'AVAILABLE'),
@@ -122,7 +100,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (2, 9, 29, 200, '2026-07-15', 'AB+', 'PLATELETS',   '2026-07-15', '2026-07-20', 'EXPIRED'),
 (2,10, 30, 450, '2026-05-10', 'O+',  'RBC',         '2026-05-10', '2026-06-14', 'EXPIRED'),
 
--- Bank 3 (10 units)
 (3, 1, 32, 450, '2026-08-28', 'B+',  'WHOLE_BLOOD', '2026-08-28', '2026-10-02', 'AVAILABLE'),
 (3, 2, 33, 450, '2026-06-05', 'O-',  'RBC',         '2026-06-05', '2026-07-10', 'EXPIRED'),
 (3, 3, 35, 250, '2026-09-15', 'A-',  'PLASMA',      '2026-09-15', '2027-09-15', 'AVAILABLE'),
@@ -134,7 +111,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (3, 9, 44, 200, '2026-05-15', 'O+',  'PLATELETS',   '2026-05-15', '2026-05-20', 'EXPIRED'),
 (3,10, 45, 450, '2026-09-08', 'AB+', 'RBC',         '2026-09-08', '2026-10-13', 'AVAILABLE'),
 
--- Bank 4 (10 units)
 (4, 1, 47, 450, '2026-08-05', 'B+',  'WHOLE_BLOOD', '2026-08-05', '2026-09-09', 'AVAILABLE'),
 (4, 2, 48, 450, '2026-06-20', 'O+',  'RBC',         '2026-06-20', '2026-07-25', 'EXPIRED'),
 (4, 3, 50, 250, '2026-07-25', 'A+',  'PLASMA',      '2026-07-25', '2027-07-25', 'AVAILABLE'),
@@ -146,7 +122,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (4, 9, 11, 200, '2026-10-20', 'O+',  'PLATELETS',   '2026-10-20', '2026-10-25', 'AVAILABLE'),
 (4,10, 12, 450, '2026-10-18', 'A+',  'RBC',         '2026-10-18', '2026-11-22', 'AVAILABLE'),
 
--- Bank 5 (10 units)
 (5, 1, 14, 450, '2026-10-08', 'AB+', 'WHOLE_BLOOD', '2026-10-08', '2026-11-12', 'AVAILABLE'),
 (5, 2, 15, 450, '2026-10-10', 'O-',  'RBC',         '2026-10-10', '2026-11-14', 'AVAILABLE'),
 (5, 3, 17, 250, '2026-10-12', 'B+',  'PLASMA',      '2026-10-12', '2027-10-12', 'AVAILABLE'),
@@ -158,7 +133,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (5, 9, 26, 200, '2026-10-22', 'O+',  'PLATELETS',   '2026-10-22', '2026-10-27', 'AVAILABLE'),
 (5,10, 27, 450, '2026-10-24', 'A-',  'RBC',         '2026-10-24', '2026-11-28', 'AVAILABLE'),
 
--- Bank 6 (10 units)
 (6, 1, 29, 450, '2026-10-02', 'AB+', 'WHOLE_BLOOD', '2026-10-02', '2026-11-06', 'AVAILABLE'),
 (6, 2, 30, 450, '2026-10-04', 'O+',  'RBC',         '2026-10-04', '2026-11-08', 'AVAILABLE'),
 (6, 3, 32, 250, '2026-10-06', 'B+',  'PLASMA',      '2026-10-06', '2027-10-06', 'AVAILABLE'),
@@ -170,7 +144,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (6, 9, 41, 200, '2026-10-18', 'O-',  'PLATELETS',   '2026-10-18', '2026-10-23', 'AVAILABLE'),
 (6,10, 42, 450, '2026-10-20', 'A+',  'RBC',         '2026-10-20', '2026-11-24', 'AVAILABLE'),
 
--- Bank 7 (10 units)
 (7, 1, 44, 450, '2026-10-01', 'O+',  'WHOLE_BLOOD', '2026-10-01', '2026-11-05', 'AVAILABLE'),
 (7, 2, 45, 450, '2026-10-03', 'AB+', 'RBC',         '2026-10-03', '2026-11-07', 'AVAILABLE'),
 (7, 3, 47, 250, '2026-10-05', 'B+',  'PLASMA',      '2026-10-05', '2027-10-05', 'AVAILABLE'),
@@ -182,7 +155,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (7, 9,  8, 200, '2026-10-17', 'AB-', 'PLATELETS',   '2026-10-17', '2026-10-22', 'AVAILABLE'),
 (7,10, 10, 450, '2026-10-19', 'B+',  'RBC',         '2026-10-19', '2026-11-23', 'AVAILABLE'),
 
--- Bank 8 (10 units)
 (8, 1, 13, 450, '2026-10-02', 'B-',  'WHOLE_BLOOD', '2026-10-02', '2026-11-06', 'AVAILABLE'),
 (8, 2, 16, 450, '2026-10-04', 'A+',  'RBC',         '2026-10-04', '2026-11-08', 'AVAILABLE'),
 (8, 3, 19, 250, '2026-10-06', 'AB-', 'PLASMA',      '2026-10-06', '2027-10-06', 'AVAILABLE'),
@@ -194,7 +166,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (8, 9, 37, 200, '2026-10-18', 'O+',  'PLATELETS',   '2026-10-18', '2026-10-23', 'AVAILABLE'),
 (8,10, 40, 450, '2026-10-20', 'AB+', 'RBC',         '2026-10-20', '2026-11-24', 'AVAILABLE'),
 
--- Bank 9 (10 units)
 (9, 1, 43, 450, '2026-10-03', 'B-',  'WHOLE_BLOOD', '2026-10-03', '2026-11-07', 'AVAILABLE'),
 (9, 2, 46, 450, '2026-10-05', 'A-',  'RBC',         '2026-10-05', '2026-11-09', 'AVAILABLE'),
 (9, 3, 49, 250, '2026-10-07', 'AB-', 'PLASMA',      '2026-10-07', '2027-10-07', 'AVAILABLE'),
@@ -206,7 +177,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (9, 9, 11, 200, '2026-10-19', 'O+',  'PLATELETS',   '2026-10-19', '2026-10-24', 'AVAILABLE'),
 (9,10, 13, 450, '2026-10-21', 'B-',  'RBC',         '2026-10-21', '2026-11-25', 'AVAILABLE'),
 
--- Bank 10 (10 units)
 (10, 1, 15, 450, '2026-10-04', 'O-',  'WHOLE_BLOOD', '2026-10-04', '2026-11-08', 'AVAILABLE'),
 (10, 2, 17, 450, '2026-10-06', 'B+',  'RBC',         '2026-10-06', '2026-11-10', 'AVAILABLE'),
 (10, 3, 19, 250, '2026-10-08', 'AB-', 'PLASMA',      '2026-10-08', '2027-10-08', 'AVAILABLE'),
@@ -218,9 +188,6 @@ INSERT INTO blood_unit (bank_id, unit_id, donor_id, volume_ml, donation_date, bl
 (10, 9, 31, 200, '2026-10-20', 'A+',  'PLATELETS',   '2026-10-20', '2026-10-25', 'AVAILABLE'),
 (10,10, 33, 450, '2026-10-22', 'O-',  'RBC',         '2026-10-22', '2026-11-26', 'AVAILABLE');
 
--- =====================================================
--- RECIPIENTS (20 sample records for testing)
--- =====================================================
 INSERT INTO recipient (name, age, blood_group) VALUES
 ('Patient Raj Kumar',      45, 'A+'),
 ('Patient Meera Joshi',    32, 'B+'),

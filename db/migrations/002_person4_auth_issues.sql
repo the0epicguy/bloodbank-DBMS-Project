@@ -1,27 +1,5 @@
--- =====================================================
--- Blood Bank Management System - MySQL Schema
--- Migration 002 (Person 4): Auth + Issue hardening + Report views
---
--- What this migration does:
---   1. Creates `user_account` (JWT login + role-based access)
---   2. Hardens `issue`:
---        - issue_date DATE -> DATETIME (full audit timestamp)
---        - adds `issued_by` (which user performed the issue)
---        - UNIQUE (bank_id, unit_id): a physical bag can be issued ONCE
---   3. Adds a BEFORE INSERT trigger on `issue` (DB-level safety net)
---   4. Adds two views used by the dashboard / viva queries
---
--- Safe to run more than once (all steps are guarded).
--- Run AFTER 001_create_tables.sql.
--- =====================================================
-
 USE bloodbank;
 
--- =====================================================
--- TABLE: user_account
--- entity_ref_id links a user to a bank_id, hospital_id or donor_id
--- depending on `role` (NULL for ADMIN).
--- =====================================================
 CREATE TABLE IF NOT EXISTS user_account (
     user_id        INT AUTO_INCREMENT PRIMARY KEY,
     username       VARCHAR(50)  NOT NULL UNIQUE,
@@ -33,19 +11,15 @@ CREATE TABLE IF NOT EXISTS user_account (
     created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- =====================================================
--- Guarded ALTERs on `issue` (so the script can be re-run)
--- =====================================================
 DROP PROCEDURE IF EXISTS p4_migrate_issue;
 
 DELIMITER //
 CREATE PROCEDURE p4_migrate_issue()
 BEGIN
-    -- issue_date: DATE -> DATETIME (idempotent, MODIFY can be repeated)
+
     ALTER TABLE issue
         MODIFY issue_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
-    -- issued_by: which user performed the issue (audit trail)
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'issue'
@@ -57,7 +31,6 @@ BEGIN
             ON DELETE SET NULL;
     END IF;
 
-    -- A physical blood bag can only ever be issued once
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'issue'
@@ -67,7 +40,6 @@ BEGIN
             ADD CONSTRAINT uq_unit_single_issue UNIQUE (bank_id, unit_id);
     END IF;
 
-    -- Speeds up "all issues of a request" lookups
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.STATISTICS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'issue'
@@ -81,11 +53,6 @@ DELIMITER ;
 CALL p4_migrate_issue();
 DROP PROCEDURE p4_migrate_issue;
 
--- =====================================================
--- TRIGGER: refuse to issue a unit that is not AVAILABLE or is expired.
--- The Python service already checks this (clean error messages), the
--- trigger guarantees it even if someone inserts straight into MySQL.
--- =====================================================
 DROP TRIGGER IF EXISTS trg_before_issue_insert;
 
 DELIMITER //
@@ -112,9 +79,6 @@ BEGIN
 END //
 DELIMITER ;
 
--- =====================================================
--- VIEW 1: Available stock matrix (bank x group x component)
--- =====================================================
 CREATE OR REPLACE VIEW vw_available_stock AS
 SELECT
     b.bank_id,
@@ -128,10 +92,6 @@ JOIN blood_bank b ON u.bank_id = b.bank_id
 WHERE u.status = 'AVAILABLE' AND u.expiry_date >= CURRENT_DATE()
 GROUP BY b.bank_id, b.name, u.blood_group, u.component_type;
 
--- =====================================================
--- VIEW 2: Request fulfilment progress
--- (the blood group comes from the recipient)
--- =====================================================
 CREATE OR REPLACE VIEW vw_request_status_summary AS
 SELECT
     r.request_id,

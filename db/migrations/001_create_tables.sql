@@ -1,16 +1,6 @@
--- =====================================================
--- Blood Bank Management System - MySQL Schema
--- Migration 001: Create all tables
--- =====================================================
-
--- Use the bloodbank database
 CREATE DATABASE IF NOT EXISTS bloodbank;
 USE bloodbank;
 
--- =====================================================
--- TABLE: blood_bank
--- Stores blood bank/centre information
--- =====================================================
 CREATE TABLE IF NOT EXISTS blood_bank (
     bank_id     INT AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
@@ -18,10 +8,6 @@ CREATE TABLE IF NOT EXISTS blood_bank (
     contact     VARCHAR(20) NOT NULL
 ) ENGINE=InnoDB;
 
--- =====================================================
--- TABLE: hospital
--- Stores hospital information that raises blood requests
--- =====================================================
 CREATE TABLE IF NOT EXISTS hospital (
     hospital_id INT AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
@@ -29,10 +15,6 @@ CREATE TABLE IF NOT EXISTS hospital (
     contact     VARCHAR(20) NOT NULL
 ) ENGINE=InnoDB;
 
--- =====================================================
--- TABLE: recipient
--- Stores patient/recipient information
--- =====================================================
 CREATE TABLE IF NOT EXISTS recipient (
     recipient_id INT AUTO_INCREMENT PRIMARY KEY,
     name         VARCHAR(100) NOT NULL,
@@ -40,11 +22,6 @@ CREATE TABLE IF NOT EXISTS recipient (
     blood_group  ENUM('A+','A-','B+','B-','AB+','AB-','O+','O-') NOT NULL
 ) ENGINE=InnoDB;
 
--- =====================================================
--- TABLE: donor
--- Stores blood donor information
--- Relationship: 1 donor donates N blood units
--- =====================================================
 CREATE TABLE IF NOT EXISTS donor (
     donor_id            INT AUTO_INCREMENT PRIMARY KEY,
     name                VARCHAR(100) NOT NULL,
@@ -54,11 +31,6 @@ CREATE TABLE IF NOT EXISTS donor (
     last_donation_date  DATE DEFAULT NULL
 ) ENGINE=InnoDB;
 
--- =====================================================
--- TABLE: blood_unit (weak entity)
--- Identified by (bank_id, unit_id) — composite primary key
--- unit_id is a partial key, unique per blood bank
--- =====================================================
 CREATE TABLE IF NOT EXISTS blood_unit (
     bank_id         INT NOT NULL,
     unit_id         INT NOT NULL,
@@ -76,10 +48,6 @@ CREATE TABLE IF NOT EXISTS blood_unit (
     CHECK (expiry_date > collection_date)
 ) ENGINE=InnoDB;
 
--- =====================================================
--- TABLE: request
--- A hospital raises a request for blood on behalf of a recipient
--- =====================================================
 CREATE TABLE IF NOT EXISTS request (
     request_id      INT AUTO_INCREMENT PRIMARY KEY,
     hospital_id     INT NOT NULL,
@@ -93,10 +61,6 @@ CREATE TABLE IF NOT EXISTS request (
     FOREIGN KEY (recipient_id) REFERENCES recipient(recipient_id)
 ) ENGINE=InnoDB;
 
--- =====================================================
--- TABLE: issue (weak/associative entity)
--- Links a request to a blood_unit — records the actual issue
--- =====================================================
 CREATE TABLE IF NOT EXISTS issue (
     issue_id        INT AUTO_INCREMENT PRIMARY KEY,
     request_id      INT NOT NULL,
@@ -108,9 +72,6 @@ CREATE TABLE IF NOT EXISTS issue (
     FOREIGN KEY (bank_id, unit_id) REFERENCES blood_unit(bank_id, unit_id)
 ) ENGINE=InnoDB;
 
--- =====================================================
--- INDEXES for performance
--- =====================================================
 CREATE INDEX idx_unit_search    ON blood_unit (blood_group, component_type, status, expiry_date);
 CREATE INDEX idx_request_status ON request (status, urgency);
 CREATE INDEX idx_donor_phone    ON donor (phone);

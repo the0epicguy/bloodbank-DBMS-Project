@@ -1,12 +1,4 @@
--- ============================================================================
--- Blood Bank Management System: Academic DBMS Evaluation Queries (Viva / Lab)
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- Query 1: Critical Stock Alert (Groups with < 5 available units per bank)
--- Demonstrates: Aggregation, HAVING clause, and Date Comparison.
--- ----------------------------------------------------------------------------
-SELECT 
+SELECT
     b.name AS bank_name,
     u.blood_group,
     u.component_type,
@@ -18,11 +10,7 @@ GROUP BY b.bank_id, b.name, u.blood_group, u.component_type
 HAVING COUNT(u.unit_id) < 5
 ORDER BY current_stock ASC;
 
--- ----------------------------------------------------------------------------
--- Query 2: Units Expiring Within Next 7 Days (FEFO Prioritization)
--- Demonstrates: DATEDIFF, DATE_ADD intervals, and Sorting for FIFO/FEFO rotation.
--- ----------------------------------------------------------------------------
-SELECT 
+SELECT
     b.name AS bank_name,
     u.bank_id,
     u.unit_id,
@@ -32,15 +20,11 @@ SELECT
     DATEDIFF(u.expiry_date, CURRENT_DATE()) AS days_to_expiry
 FROM blood_unit u
 JOIN blood_bank b ON u.bank_id = b.bank_id
-WHERE u.status = 'AVAILABLE' 
+WHERE u.status = 'AVAILABLE'
   AND u.expiry_date BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 7 DAY)
 ORDER BY u.expiry_date ASC;
 
--- ----------------------------------------------------------------------------
--- Query 3: Hospital Emergency Demand vs Fulfillment Percentage
--- Demonstrates: Conditional aggregation (CASE inside SUM), percentage computation.
--- ----------------------------------------------------------------------------
-SELECT 
+SELECT
     h.name AS hospital_name,
     COUNT(r.request_id) AS total_emergency_requests,
     SUM(r.quantity) AS total_units_demanded,
@@ -52,11 +36,7 @@ WHERE r.urgency = 'EMERGENCY'
 GROUP BY h.hospital_id, h.name
 ORDER BY total_emergency_requests DESC;
 
--- ----------------------------------------------------------------------------
--- Query 4: Top Donors Ranked by Donation Frequency (Window Function)
--- Demonstrates: SQL Window Functions (DENSE_RANK() OVER (ORDER BY ... DESC)).
--- ----------------------------------------------------------------------------
-SELECT 
+SELECT
     d.donor_id,
     d.name,
     d.blood_group,
@@ -67,11 +47,7 @@ FROM donor d
 JOIN blood_unit u ON d.donor_id = u.donor_id
 GROUP BY d.donor_id, d.name, d.blood_group;
 
--- ----------------------------------------------------------------------------
--- Query 5: Full Custody Audit Trail (End-to-End Tracing)
--- Demonstrates: 6-table multi-way INNER JOIN tracing complete chain of custody.
--- ----------------------------------------------------------------------------
-SELECT 
+SELECT
     i.issue_id,
     i.issue_date,
     u.bank_id,

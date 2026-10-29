@@ -1,7 +1,3 @@
--- ============================================================================
--- Blood Bank Management System: DDL Initialization Script (MySQL 8.0+)
--- ============================================================================
-
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS issue;
@@ -15,9 +11,6 @@ DROP TABLE IF EXISTS user_account;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- ----------------------------------------------------------------------------
--- 1. User Accounts (Authentication & Role-Based Access Control)
--- ----------------------------------------------------------------------------
 CREATE TABLE user_account (
     user_id       INT AUTO_INCREMENT PRIMARY KEY,
     username      VARCHAR(50) NOT NULL UNIQUE,
@@ -25,13 +18,10 @@ CREATE TABLE user_account (
     password_hash VARCHAR(255) NOT NULL,
     full_name     VARCHAR(100) NOT NULL,
     role          ENUM('ADMIN', 'BANK_STAFF', 'HOSPITAL_STAFF', 'DONOR') NOT NULL,
-    entity_ref_id INT DEFAULT NULL, -- Links to bank_id, hospital_id, or donor_id
+    entity_ref_id INT DEFAULT NULL,
     created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
--- 2. Blood Bank Entity
--- ----------------------------------------------------------------------------
 CREATE TABLE blood_bank (
     bank_id      INT AUTO_INCREMENT PRIMARY KEY,
     name         VARCHAR(120) NOT NULL,
@@ -42,9 +32,6 @@ CREATE TABLE blood_bank (
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
--- 3. Hospital Entity
--- ----------------------------------------------------------------------------
 CREATE TABLE hospital (
     hospital_id  INT AUTO_INCREMENT PRIMARY KEY,
     name         VARCHAR(120) NOT NULL,
@@ -55,9 +42,6 @@ CREATE TABLE hospital (
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
--- 4. Recipient Entity
--- ----------------------------------------------------------------------------
 CREATE TABLE recipient (
     recipient_id INT AUTO_INCREMENT PRIMARY KEY,
     name         VARCHAR(100) NOT NULL,
@@ -67,13 +51,10 @@ CREATE TABLE recipient (
     hospital_id  INT DEFAULT NULL,
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_recipient_age CHECK (age BETWEEN 0 AND 120),
-    CONSTRAINT fk_recipient_hospital FOREIGN KEY (hospital_id) 
+    CONSTRAINT fk_recipient_hospital FOREIGN KEY (hospital_id)
         REFERENCES hospital(hospital_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
--- 5. Donor Entity
--- ----------------------------------------------------------------------------
 CREATE TABLE donor (
     donor_id           INT AUTO_INCREMENT PRIMARY KEY,
     name               VARCHAR(100) NOT NULL,
@@ -86,12 +67,9 @@ CREATE TABLE donor (
     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
--- 6. Blood Unit Entity (Weak Entity dependent on Blood Bank)
--- ----------------------------------------------------------------------------
 CREATE TABLE blood_unit (
     bank_id          INT NOT NULL,
-    unit_id          INT NOT NULL, -- Per-bank sequential counter (1, 2, 3...)
+    unit_id          INT NOT NULL,
     donor_id         INT NOT NULL,
     volume_ml        INT NOT NULL,
     blood_group      ENUM('A+','A-','B+','B-','AB+','AB-','O+','O-') NOT NULL,
@@ -105,15 +83,12 @@ CREATE TABLE blood_unit (
     PRIMARY KEY (bank_id, unit_id),
     CONSTRAINT chk_unit_volume CHECK (volume_ml BETWEEN 50 AND 600),
     CONSTRAINT chk_unit_expiry CHECK (expiry_date > collection_date),
-    CONSTRAINT fk_unit_bank FOREIGN KEY (bank_id) 
+    CONSTRAINT fk_unit_bank FOREIGN KEY (bank_id)
         REFERENCES blood_bank(bank_id) ON DELETE CASCADE,
-    CONSTRAINT fk_unit_donor FOREIGN KEY (donor_id) 
+    CONSTRAINT fk_unit_donor FOREIGN KEY (donor_id)
         REFERENCES donor(donor_id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
--- 7. Request Entity
--- ----------------------------------------------------------------------------
 CREATE TABLE request (
     request_id       INT AUTO_INCREMENT PRIMARY KEY,
     hospital_id      INT NOT NULL,
@@ -127,15 +102,12 @@ CREATE TABLE request (
     notes            TEXT DEFAULT NULL,
     created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_request_qty CHECK (quantity > 0),
-    CONSTRAINT fk_request_hospital FOREIGN KEY (hospital_id) 
+    CONSTRAINT fk_request_hospital FOREIGN KEY (hospital_id)
         REFERENCES hospital(hospital_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_request_recipient FOREIGN KEY (recipient_id) 
+    CONSTRAINT fk_request_recipient FOREIGN KEY (recipient_id)
         REFERENCES recipient(recipient_id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
--- 8. Issue Entity (Associative Entity: Request <-> Blood Unit)
--- ----------------------------------------------------------------------------
 CREATE TABLE issue (
     issue_id         INT AUTO_INCREMENT PRIMARY KEY,
     request_id       INT NOT NULL,
@@ -145,24 +117,18 @@ CREATE TABLE issue (
     quantity_issued  INT NOT NULL DEFAULT 1,
     notes            TEXT DEFAULT NULL,
     CONSTRAINT chk_issue_qty CHECK (quantity_issued = 1),
-    CONSTRAINT uq_unit_single_issue UNIQUE (bank_id, unit_id), -- Physical bag can only ever be issued once!
-    CONSTRAINT fk_issue_request FOREIGN KEY (request_id) 
+    CONSTRAINT uq_unit_single_issue UNIQUE (bank_id, unit_id),
+    CONSTRAINT fk_issue_request FOREIGN KEY (request_id)
         REFERENCES request(request_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_issue_unit FOREIGN KEY (bank_id, unit_id) 
+    CONSTRAINT fk_issue_unit FOREIGN KEY (bank_id, unit_id)
         REFERENCES blood_unit(bank_id, unit_id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- ----------------------------------------------------------------------------
--- Performance Indexes for Optimization & Concurrency
--- ----------------------------------------------------------------------------
 CREATE INDEX idx_unit_fefo ON blood_unit (blood_group, component_type, status, expiry_date);
 CREATE INDEX idx_unit_bank_status ON blood_unit (bank_id, status);
 CREATE INDEX idx_request_queue ON request (status, urgency, request_date);
 CREATE INDEX idx_issue_req ON issue (request_id);
 
--- ----------------------------------------------------------------------------
--- Triggers
--- ----------------------------------------------------------------------------
 DELIMITER //
 
 CREATE TRIGGER trg_after_donation_insert
@@ -182,8 +148,8 @@ BEGIN
     DECLARE total_requested INT;
     DECLARE total_issued INT;
 
-    UPDATE blood_unit 
-    SET status = 'ISSUED' 
+    UPDATE blood_unit
+    SET status = 'ISSUED'
     WHERE bank_id = NEW.bank_id AND unit_id = NEW.unit_id;
 
     SELECT quantity INTO total_requested FROM request WHERE request_id = NEW.request_id;
@@ -198,11 +164,8 @@ END //
 
 DELIMITER ;
 
--- ----------------------------------------------------------------------------
--- Stored Views
--- ----------------------------------------------------------------------------
 CREATE OR REPLACE VIEW vw_available_stock AS
-SELECT 
+SELECT
     b.bank_id,
     b.name AS bank_name,
     u.blood_group,
@@ -215,7 +178,7 @@ WHERE u.status = 'AVAILABLE' AND u.expiry_date >= CURRENT_DATE()
 GROUP BY b.bank_id, b.name, u.blood_group, u.component_type;
 
 CREATE OR REPLACE VIEW vw_request_status_summary AS
-SELECT 
+SELECT
     r.request_id,
     h.name AS hospital_name,
     rec.name AS recipient_name,
