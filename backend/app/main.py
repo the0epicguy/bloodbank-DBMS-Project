@@ -61,6 +61,7 @@ app.include_router(requests.router)
 # ── Person 4: Auth, Issues & Reports ────────────────────────────────────────
 app.include_router(auth.router)
 app.include_router(issues.router)
+app.include_router(issues.fulfil_router)
 app.include_router(reports.router)
 
 

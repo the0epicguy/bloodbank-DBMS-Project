@@ -15,7 +15,7 @@ def sweep_expired(db: Session) -> dict:
     swept = inventory_repo.sweep_expired_units(db)
     return {
         "swept_count": len(swept),
-        "swept_units": [
+        "expired_unit_ids": [
             {
                 "bank_id": u.bank_id,
                 "unit_id": u.unit_id,

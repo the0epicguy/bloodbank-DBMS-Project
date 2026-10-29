@@ -1,0 +1,101 @@
+diff --git a/backend/.env.example b/backend/.env.example
+index 043a425..55c0017 100644
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -3,7 +3,7 @@ DB_HOST=localhost
+ DB_PORT=3306
+ DB_USER=root
+ DB_PASSWORD=your_mysql_password_here
+-DB_NAME=bloodbank_db
++DB_NAME=bloodbank
+ 
+ # ── Application ─────────────────────────────────────────
+ APP_DEBUG=false
+diff --git a/backend/app/main.py b/backend/app/main.py
+index ce3bbaa..28594a9 100644
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -61,6 +61,7 @@ app.include_router(requests.router)
+ # ── Person 4: Auth, Issues & Reports ────────────────────────────────────────
+ app.include_router(auth.router)
+ app.include_router(issues.router)
++app.include_router(issues.fulfil_router)
+ app.include_router(reports.router)
+ 
+ 
+diff --git a/backend/app/routers/banks.py b/backend/app/routers/banks.py
+index c212c80..86417c0 100644
+--- a/backend/app/routers/banks.py
++++ b/backend/app/routers/banks.py
+@@ -15,7 +15,7 @@ from app.services import unit_service
+ router = APIRouter(prefix="/banks", tags=["banks"])
+ 
+ 
+-@router.get("", response_model=list[BloodBankResponse], summary="List all blood banks")
++@router.get("/", response_model=list[BloodBankResponse], summary="List all blood banks")
+ def list_banks(db: Session = Depends(get_db)):
+     return unit_service.get_all_banks_with_stock(db)
+ 
+@@ -29,7 +29,7 @@ def get_bank(bank_id: int, db: Session = Depends(get_db)):
+     return bank
+ 
+ 
+-@router.post("", response_model=BloodBankResponse, status_code=status.HTTP_201_CREATED, summary="Register a new blood bank")
++@router.post("/", response_model=BloodBankResponse, status_code=status.HTTP_201_CREATED, summary="Register a new blood bank")
+ def create_bank(payload: BloodBankCreate, db: Session = Depends(get_db)):
+     if payload.email:
+         existing = inventory_repo.get_bank_by_email(db, payload.email)
+diff --git a/backend/app/services/expiry_service.py b/backend/app/services/expiry_service.py
+index 04b9287..2a25be3 100644
+--- a/backend/app/services/expiry_service.py
++++ b/backend/app/services/expiry_service.py
+@@ -15,7 +15,7 @@ def sweep_expired(db: Session) -> dict:
+     swept = inventory_repo.sweep_expired_units(db)
+     return {
+         "swept_count": len(swept),
+-        "swept_units": [
++        "expired_unit_ids": [
+             {
+                 "bank_id": u.bank_id,
+                 "unit_id": u.unit_id,
+diff --git a/backend/app/services/issue_service.py b/backend/app/services/issue_service.py
+index 17416ac..740050c 100644
+--- a/backend/app/services/issue_service.py
++++ b/backend/app/services/issue_service.py
+@@ -216,7 +216,7 @@ def _manual_issue_once(db: Session, data: ManualIssueCreate, user: UserAccount)
+         )
+ 
+     recipient = issue_repo.get_recipient(db, req.recipient_id)
+-    if not is_compatible(recipient.blood_group, unit.blood_group, req.component_type):
++    if not is_compatible(unit.blood_group, recipient.blood_group, req.component_type):
+         raise ValidationFailed(
+             f"{unit.blood_group} {req.component_type} is not compatible with "
+             f"recipient blood group {recipient.blood_group}"
+diff --git a/db/migrations/001_create_tables.sql b/db/migrations/001_create_tables.sql
+index b9852d3..bf1f0dd 100644
+--- a/db/migrations/001_create_tables.sql
++++ b/db/migrations/001_create_tables.sql
+@@ -3,9 +3,12 @@ USE bloodbank;
+ 
+ CREATE TABLE IF NOT EXISTS blood_bank (
+     bank_id     INT AUTO_INCREMENT PRIMARY KEY,
+-    name        VARCHAR(100) NOT NULL,
++    name        VARCHAR(120) NOT NULL,
+     address     TEXT NOT NULL,
+-    contact     VARCHAR(20) NOT NULL
++    city        VARCHAR(60) NOT NULL DEFAULT 'Pune',
++    contact     VARCHAR(20) NOT NULL,
++    email       VARCHAR(100) UNIQUE,
++    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+ ) ENGINE=InnoDB;
+ 
+ CREATE TABLE IF NOT EXISTS hospital (
+@@ -42,6 +45,8 @@ CREATE TABLE IF NOT EXISTS blood_unit (
+     collection_date DATE NOT NULL,
+     expiry_date     DATE NOT NULL,
+     status          ENUM('AVAILABLE','RESERVED','ISSUED','EXPIRED','DISCARDED') NOT NULL DEFAULT 'AVAILABLE',
++    discard_reason  TEXT DEFAULT NULL,
++    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     PRIMARY KEY (bank_id, unit_id),
+     FOREIGN KEY (bank_id)  REFERENCES blood_bank(bank_id) ON DELETE CASCADE,
+     FOREIGN KEY (donor_id) REFERENCES donor(donor_id),

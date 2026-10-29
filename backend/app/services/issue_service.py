@@ -216,7 +216,7 @@ def _manual_issue_once(db: Session, data: ManualIssueCreate, user: UserAccount) 
         )
 
     recipient = issue_repo.get_recipient(db, req.recipient_id)
-    if not is_compatible(recipient.blood_group, unit.blood_group, req.component_type):
+    if not is_compatible(unit.blood_group, recipient.blood_group, req.component_type):
         raise ValidationFailed(
             f"{unit.blood_group} {req.component_type} is not compatible with "
             f"recipient blood group {recipient.blood_group}"

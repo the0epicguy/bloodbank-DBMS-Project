@@ -3,9 +3,12 @@ USE bloodbank;
 
 CREATE TABLE IF NOT EXISTS blood_bank (
     bank_id     INT AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(100) NOT NULL,
+    name        VARCHAR(120) NOT NULL,
     address     TEXT NOT NULL,
-    contact     VARCHAR(20) NOT NULL
+    city        VARCHAR(60) NOT NULL DEFAULT 'Pune',
+    contact     VARCHAR(20) NOT NULL,
+    email       VARCHAR(100) UNIQUE,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS hospital (
@@ -42,6 +45,8 @@ CREATE TABLE IF NOT EXISTS blood_unit (
     collection_date DATE NOT NULL,
     expiry_date     DATE NOT NULL,
     status          ENUM('AVAILABLE','RESERVED','ISSUED','EXPIRED','DISCARDED') NOT NULL DEFAULT 'AVAILABLE',
+    discard_reason  TEXT DEFAULT NULL,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (bank_id, unit_id),
     FOREIGN KEY (bank_id)  REFERENCES blood_bank(bank_id) ON DELETE CASCADE,
     FOREIGN KEY (donor_id) REFERENCES donor(donor_id),
