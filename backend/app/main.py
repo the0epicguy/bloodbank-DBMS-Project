@@ -14,6 +14,7 @@ Run with:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.routers import hospitals, recipients, requests
 
 # Create the FastAPI application
 app = FastAPI(
@@ -21,6 +22,11 @@ app = FastAPI(
     description="API for managing blood donations, inventory, and requests",
     version="1.0.0",
 )
+
+app.include_router(hospitals.router)
+app.include_router(recipients.router)
+app.include_router(requests.router)
+
 
 # Configure CORS — allows the React frontend to call the API
 app.add_middleware(
