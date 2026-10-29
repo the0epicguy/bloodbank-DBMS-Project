@@ -3,7 +3,7 @@ repositories/inventory_repo.py
 All raw database access for blood_bank and blood_unit (sync SQLAlchemy).
 """
 
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import and_, func, select, text
 from sqlalchemy.orm import Session
@@ -100,9 +100,10 @@ def get_units_for_bank(
     if status:
         filters.append(BloodUnit.status == status)
     if expiring_within_days is not None:
-        cutoff = func.date_add(func.current_date(), text(f"INTERVAL {expiring_within_days} DAY"))
+        today = date.today()
+        cutoff = today + timedelta(days=expiring_within_days)
         filters.append(
-            and_(BloodUnit.expiry_date >= func.current_date(), BloodUnit.expiry_date <= cutoff)
+            and_(BloodUnit.expiry_date >= today, BloodUnit.expiry_date <= cutoff)
         )
     result = db.execute(
         select(BloodUnit).where(and_(*filters)).order_by(BloodUnit.expiry_date.asc()).offset(skip).limit(limit)

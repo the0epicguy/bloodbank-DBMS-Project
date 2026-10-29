@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api/client';
-import { useAuth, canFulfil } from '../../auth/AuthContext';
 import FulfillRequestModal from './FulfillRequestModal';
 
 /**
@@ -12,7 +11,6 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const PAGE_SIZE = 15;
 
 export default function IssueLog() {
-  const { user } = useAuth();
   const [pending, setPending] = useState([]);
   const [issues, setIssues] = useState({ total: 0, items: [] });
   const [loading, setLoading] = useState(true);
@@ -87,7 +85,7 @@ export default function IssueLog() {
                   <th>Needs</th>
                   <th>Progress</th>
                   <th>Status</th>
-                  {canFulfil(user) && <th></th>}
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -123,14 +121,12 @@ export default function IssueLog() {
                         {r.status.replace('_', ' ')}
                       </span>
                     </td>
-                    {canFulfil(user) && (
                       <td>
                         <button className="btn btn-primary btn-sm" onClick={() => setSelected(r)}>
                           Fulfil
                         </button>
                       </td>
-                    )}
-                  </tr>
+                    </tr>
                 ))}
               </tbody>
             </table>

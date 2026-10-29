@@ -64,6 +64,14 @@ app.include_router(issues.router)
 app.include_router(reports.router)
 
 
+# ── Startup event ────────────────────────────────────────────────────────────
+@app.on_event("startup")
+def on_startup():
+    from app.core.database import engine, Base
+    from app.core.db_init import init_database
+    init_database(engine, Base)
+
+
 # ── Health ───────────────────────────────────────────────────────────────────
 @app.get("/", tags=["health"])
 def health_check():
@@ -73,3 +81,4 @@ def health_check():
 @app.get("/health", tags=["health"])
 def health():
     return {"status": "ok"}
+

@@ -15,7 +15,8 @@ from app.services import unit_service
 router = APIRouter(prefix="/banks", tags=["banks"])
 
 
-@router.get("", response_model=list[BloodBankResponse], summary="List all blood banks")
+@router.get("", response_model=list[BloodBankResponse], include_in_schema=False)
+@router.get("/", response_model=list[BloodBankResponse], summary="List all blood banks")
 def list_banks(db: Session = Depends(get_db)):
     return unit_service.get_all_banks_with_stock(db)
 
@@ -29,7 +30,8 @@ def get_bank(bank_id: int, db: Session = Depends(get_db)):
     return bank
 
 
-@router.post("", response_model=BloodBankResponse, status_code=status.HTTP_201_CREATED, summary="Register a new blood bank")
+@router.post("", response_model=BloodBankResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
+@router.post("/", response_model=BloodBankResponse, status_code=status.HTTP_201_CREATED, summary="Register a new blood bank")
 def create_bank(payload: BloodBankCreate, db: Session = Depends(get_db)):
     if payload.email:
         existing = inventory_repo.get_bank_by_email(db, payload.email)

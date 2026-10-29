@@ -18,7 +18,6 @@ from app.services import report_service
 router = APIRouter(
     prefix="/reports",
     tags=["Reports"],
-    dependencies=[Depends(require_roles("ADMIN", "BANK_STAFF"))],
 )
 
 

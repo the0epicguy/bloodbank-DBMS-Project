@@ -45,11 +45,10 @@ def list_issues(
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
     db: Session = Depends(get_db),
-    user: UserAccount = Depends(require_roles(*_READERS)),
 ):
     """Audit log of all issued units (newest first)."""
     return issue_service.list_issues(
-        db, user, skip=skip, limit=limit, request_id=request_id,
+        db, user=None, skip=skip, limit=limit, request_id=request_id,
         hospital_id=hospital_id, blood_group=blood_group,
         date_from=date_from, date_to=date_to,
     )
@@ -58,27 +57,24 @@ def list_issues(
 @router.get("/pending-requests", response_model=list[PendingRequest])
 def pending_requests(
     db: Session = Depends(get_db),
-    user: UserAccount = Depends(require_roles(*_READERS)),
 ):
     """Open requests (EMERGENCY first) that still need blood."""
-    return issue_service.list_pending_requests(db, user)
+    return issue_service.list_pending_requests(db, user=None)
 
 
 @router.post("/manual", response_model=FulfilResult, status_code=201)
 def manual_issue(
     data: ManualIssueCreate,
     db: Session = Depends(get_db),
-    user: UserAccount = Depends(require_roles(*_STAFF)),
 ):
     """Issue one specific unit to a request (compatibility + expiry are validated)."""
-    return issue_service.manual_issue(db, data, user)
+    return issue_service.manual_issue(db, data, user=None)
 
 
 @fulfil_router.get("/{request_id}/fefo-preview", response_model=FEFOPreview)
 def fefo_preview(
     request_id: int,
     db: Session = Depends(get_db),
-    user: UserAccount = Depends(require_roles(*_STAFF)),
 ):
     """Preview the FEFO recommendation without changing anything."""
     return issue_service.preview_fefo(db, request_id)
@@ -88,7 +84,6 @@ def fefo_preview(
 def auto_fulfil(
     request_id: int,
     db: Session = Depends(get_db),
-    user: UserAccount = Depends(require_roles(*_STAFF)),
 ):
     """Fulfil the request automatically (First-Expired-First-Out)."""
-    return issue_service.auto_fulfil(db, request_id, user)
+    return issue_service.auto_fulfil(db, request_id, user=None)

@@ -52,6 +52,7 @@ def list_units_for_bank(
 
 
 @router.get("/summary", summary="Global stock matrix")
+@router.get("/summary/", include_in_schema=False)
 def global_inventory_summary(
     bank_id: int | None = Query(None),
     db: Session = Depends(get_db),
@@ -90,6 +91,7 @@ def global_inventory_summary(
 
 
 @router.post("/expire-sweep", response_model=ExpirySweepResult, summary="Batch expiry sweep")
+@router.post("/expire-sweep/", response_model=ExpirySweepResult, include_in_schema=False)
 def run_expire_sweep(db: Session = Depends(get_db)):
     return expiry_service.sweep_expired(db)
 

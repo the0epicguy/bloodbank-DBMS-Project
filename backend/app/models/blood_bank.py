@@ -19,7 +19,7 @@ class BloodBank(Base):
     bank_id:    Mapped[int]      = mapped_column(primary_key=True, autoincrement=True)
     name:       Mapped[str]      = mapped_column(String(120), nullable=False)
     address:    Mapped[str]      = mapped_column(Text, nullable=False)
-    city:       Mapped[str]      = mapped_column(String(60), nullable=False)
+    city:       Mapped[str | None] = mapped_column(String(60), nullable=True, server_default="Pune")
     contact:    Mapped[str]      = mapped_column(String(20), nullable=False)
     email:      Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

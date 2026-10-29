@@ -19,6 +19,7 @@ Integration notes (contracts from the plan):
 
 import time
 from datetime import date
+from typing import Optional
 
 from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError
 from sqlalchemy.orm import Session
@@ -58,7 +59,7 @@ def _sync_request_status(db: Session, req: Request) -> int:
     return issued
 
 
-def _issue_unit(db: Session, req: Request, unit, user: UserAccount):
+def _issue_unit(db: Session, req: Request, unit, user: Optional[UserAccount] = None):
     """
     Record one issue and flip the unit to ISSUED.
     The issue row goes in FIRST (flush) so the DB trigger can verify the unit
@@ -124,7 +125,7 @@ def preview_fefo(db: Session, request_id: int) -> FEFOPreview:
 
 
 # ------------------------------------------------------------- auto-fulfil
-def auto_fulfil(db: Session, request_id: int, user: UserAccount) -> FulfilResult:
+def auto_fulfil(db: Session, request_id: int, user: Optional[UserAccount] = None) -> FulfilResult:
     """
     Automatically fulfil a request with FEFO allocation.
     If stock only covers part of it, the request becomes PARTIALLY_FULFILLED.
@@ -147,7 +148,7 @@ def auto_fulfil(db: Session, request_id: int, user: UserAccount) -> FulfilResult
             raise
 
 
-def _auto_fulfil_once(db: Session, request_id: int, user: UserAccount) -> FulfilResult:
+def _auto_fulfil_once(db: Session, request_id: int, user: Optional[UserAccount] = None) -> FulfilResult:
     req = issue_repo.get_request_for_update(db, request_id)
     if not req:
         raise NotFound(f"Request with ID {request_id} not found")
@@ -181,7 +182,7 @@ def _auto_fulfil_once(db: Session, request_id: int, user: UserAccount) -> Fulfil
 
 
 # ------------------------------------------------------------ manual issue
-def manual_issue(db: Session, data: ManualIssueCreate, user: UserAccount) -> FulfilResult:
+def manual_issue(db: Session, data: ManualIssueCreate, user: Optional[UserAccount] = None) -> FulfilResult:
     """Issue one specific bag (bank_id, unit_id) to a request, with validation."""
     try:
         return _manual_issue_once(db, data, user)
@@ -195,7 +196,7 @@ def manual_issue(db: Session, data: ManualIssueCreate, user: UserAccount) -> Ful
         raise
 
 
-def _manual_issue_once(db: Session, data: ManualIssueCreate, user: UserAccount) -> FulfilResult:
+def _manual_issue_once(db: Session, data: ManualIssueCreate, user: Optional[UserAccount] = None) -> FulfilResult:
     # Lock order is always: request first, then unit (avoids deadlocks)
     req = issue_repo.get_request_for_update(db, data.request_id)
     if not req:
@@ -248,16 +249,16 @@ def _build_result(req: Request, total_issued: int, issued_units: list[IssuedUnit
 
 
 # ------------------------------------------------------------- audit / lists
-def list_issues(db: Session, user: UserAccount, **filters) -> IssueListResponse:
+def list_issues(db: Session, user: Optional[UserAccount] = None, **filters) -> IssueListResponse:
     """Audit log. Hospital staff only ever see their own hospital's issues."""
-    if user.role == "HOSPITAL_STAFF" and user.entity_ref_id is not None:
+    if user and user.role == "HOSPITAL_STAFF" and user.entity_ref_id is not None:
         filters["hospital_id"] = user.entity_ref_id
     total, rows = issue_repo.list_issues(db, **filters)
     return IssueListResponse(total=total, items=[IssueResponse(**r) for r in rows])
 
 
-def list_pending_requests(db: Session, user: UserAccount) -> list[PendingRequest]:
-    hospital_id = user.entity_ref_id if user.role == "HOSPITAL_STAFF" else None
+def list_pending_requests(db: Session, user: Optional[UserAccount] = None) -> list[PendingRequest]:
+    hospital_id = user.entity_ref_id if (user and user.role == "HOSPITAL_STAFF") else None
     out = []
     for r in issue_repo.list_pending_requests(db, hospital_id):
         out.append(PendingRequest(

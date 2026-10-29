@@ -1,8 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 
-import { AuthProvider, useAuth, canSeeReports, canSeeIssues } from './auth/AuthContext';
-import LoginPage from './pages/auth/LoginPage';
 import ExecutiveDashboard from './pages/dashboard/ExecutiveDashboard';
 import DonorList from './pages/donors/DonorList';
 import DonorDetail from './pages/donors/DonorDetail';
@@ -14,232 +12,113 @@ import IssueLog from './pages/issues/IssueLog';
 
 const navClass = ({ isActive }) => `nav-link ${isActive ? 'active' : ''}`;
 
-/** "/" redirects each role to their most relevant landing page. */
-function RoleHome() {
-  const { user } = useAuth();
-  if (canSeeReports(user)) return <Navigate to="/dashboard" replace />;
-  if (canSeeIssues(user)) return <Navigate to="/issues" replace />;
-  return <Navigate to="/donors" replace />;
-}
-
-/** Renders an "access denied" message when the user's role is not allowed. */
-function Guard({ allowed, children }) {
-  const { user } = useAuth();
-  if (!allowed(user)) {
-    return (
-      <div className="empty-state">
-        <div className="empty-state-icon">🔒</div>
-        <div className="empty-state-text">
-          Your role ({user.role.replace(/_/g, ' ')}) cannot open this page.
-        </div>
-      </div>
-    );
-  }
-  return children;
-}
-
-/** The main shell: sidebar + route outlet. Shown after login. */
-function Shell() {
-  const { user, logout } = useAuth();
-  const isAdmin = canSeeReports(user);
-  const isStaff = canSeeIssues(user);
-
-  return (
-    <div className="app-layout">
-      {/* ── Sidebar ─────────────────────────────────────────────── */}
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <a href="/" className="sidebar-logo">
-            <div className="sidebar-logo-icon">🩸</div>
-            <div>
-              <div className="sidebar-logo-text">BloodBank</div>
-              <div className="sidebar-logo-sub">Management System</div>
-            </div>
-          </a>
-        </div>
-
-        <nav className="sidebar-nav">
-          {/* Overview – admin / bank staff only */}
-          {isAdmin && (
-            <>
-              <div className="nav-section-title">Overview</div>
-              <NavLink to="/dashboard" className={navClass}>
-                <span className="nav-link-icon">📊</span>Dashboard
-              </NavLink>
-            </>
-          )}
-
-          {/* Donors – everyone */}
-          <div className="nav-section-title" style={{ marginTop: '1.5rem' }}>
-            Donors (P1)
-          </div>
-          <NavLink to="/donors" className={navClass}>
-            <span className="nav-link-icon">👤</span>Donor List
-          </NavLink>
-
-          {/* Inventory – admin / bank staff only */}
-          {isAdmin && (
-            <>
-              <div className="nav-section-title" style={{ marginTop: '1.5rem' }}>
-                Inventory (P2)
-              </div>
-              <NavLink to="/banks" className={navClass}>
-                <span className="nav-link-icon">🏥</span>Blood Banks
-              </NavLink>
-              <NavLink to="/inventory" className={navClass}>
-                <span className="nav-link-icon">🧬</span>Stock Matrix
-              </NavLink>
-              <NavLink to="/sweep" className={navClass}>
-                <span className="nav-link-icon">🧹</span>Expiry Sweep
-              </NavLink>
-            </>
-          )}
-
-          {/* Hospitals / Recipients / Requests – staff + admin */}
-          {isStaff && (
-            <>
-              <div className="nav-section-title" style={{ marginTop: '1.5rem' }}>
-                Requests (P3)
-              </div>
-              <NavLink to="/hospitals" className={navClass}>
-                <span className="nav-link-icon">🏨</span>Hospitals
-              </NavLink>
-              <NavLink to="/recipients" className={navClass}>
-                <span className="nav-link-icon">🫀</span>Recipients
-              </NavLink>
-              <NavLink to="/requests" className={navClass}>
-                <span className="nav-link-icon">📋</span>Blood Requests
-              </NavLink>
-            </>
-          )}
-
-          {/* Issues – staff + admin */}
-          {isStaff && (
-            <>
-              <div className="nav-section-title" style={{ marginTop: '1.5rem' }}>
-                Fulfilment (P4)
-              </div>
-              <NavLink to="/issues" className={navClass}>
-                <span className="nav-link-icon">💉</span>Issue Log
-              </NavLink>
-            </>
-          )}
-        </nav>
-
-        <div className="sidebar-user">
-          <div className="sidebar-user-name">{user.full_name}</div>
-          <div className="sidebar-user-role">{user.role.replace(/_/g, ' ')}</div>
-          <button className="btn btn-secondary btn-sm" onClick={logout}>
-            Sign out
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main content ─────────────────────────────────────────── */}
-      <main className="main-content">
-        <Routes>
-          <Route path="/" element={<RoleHome />} />
-
-          {/* P1 – Donors */}
-          <Route path="/donors" element={<DonorList />} />
-          <Route path="/donors/:id" element={<DonorDetail />} />
-
-          {/* P2 – Inventory */}
-          <Route
-            path="/banks"
-            element={
-              <Guard allowed={canSeeReports}>
-                <BankList />
-              </Guard>
-            }
-          />
-          <Route
-            path="/inventory"
-            element={
-              <Guard allowed={canSeeReports}>
-                <InventoryDashboard />
-              </Guard>
-            }
-          />
-          <Route
-            path="/sweep"
-            element={
-              <Guard allowed={canSeeReports}>
-                <ExpirySweepAction />
-              </Guard>
-            }
-          />
-
-          {/* P3 – Hospitals / Recipients / Requests */}
-          <Route
-            path="/hospitals"
-            element={
-              <Guard allowed={canSeeIssues}>
-                <P3Manager type="hospitals" />
-              </Guard>
-            }
-          />
-          <Route
-            path="/recipients"
-            element={
-              <Guard allowed={canSeeIssues}>
-                <P3Manager type="recipients" />
-              </Guard>
-            }
-          />
-          <Route
-            path="/requests"
-            element={
-              <Guard allowed={canSeeIssues}>
-                <P3Manager type="requests" />
-              </Guard>
-            }
-          />
-
-          {/* P4 – Issues & Dashboard */}
-          <Route
-            path="/issues"
-            element={
-              <Guard allowed={canSeeIssues}>
-                <IssueLog />
-              </Guard>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <Guard allowed={canSeeReports}>
-                <ExecutiveDashboard />
-              </Guard>
-            }
-          />
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-    </div>
-  );
-}
-
-/** Shows LoginPage until the user is authenticated. */
-function Gate() {
-  const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="empty-state loading">
-        <div className="empty-state-text">Loading…</div>
-      </div>
-    );
-  }
-  return user ? <Shell /> : <LoginPage />;
-}
-
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Gate />
-      </BrowserRouter>
-    </AuthProvider>
+    <BrowserRouter>
+      <div className="app-layout">
+        {/* ── Sidebar ─────────────────────────────────────────────── */}
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <NavLink to="/banks" className="sidebar-logo">
+              <div className="sidebar-logo-icon">🩸</div>
+              <div>
+                <div className="sidebar-logo-text">BloodBank</div>
+                <div className="sidebar-logo-sub">Management System</div>
+              </div>
+            </NavLink>
+          </div>
+
+          <nav className="sidebar-nav">
+            {/* Direct Bank & Inventory Section (Person 2) */}
+            <div className="nav-section-title">Blood Banks & Inventory (P2)</div>
+            <NavLink to="/banks" className={navClass}>
+              <span className="nav-link-icon">🏥</span>Blood Banks
+            </NavLink>
+            <NavLink to="/inventory" className={navClass}>
+              <span className="nav-link-icon">🧬</span>Stock Matrix
+            </NavLink>
+            <NavLink to="/sweep" className={navClass}>
+              <span className="nav-link-icon">🧹</span>Expiry Sweep
+            </NavLink>
+
+            {/* Overview / Analytics */}
+            <div className="nav-section-title" style={{ marginTop: '1.25rem' }}>
+              Overview
+            </div>
+            <NavLink to="/dashboard" className={navClass}>
+              <span className="nav-link-icon">📊</span>Dashboard
+            </NavLink>
+
+            {/* Donors (Person 1) */}
+            <div className="nav-section-title" style={{ marginTop: '1.25rem' }}>
+              Donors & Donations (P1)
+            </div>
+            <NavLink to="/donors" className={navClass}>
+              <span className="nav-link-icon">👤</span>Donor List
+            </NavLink>
+
+            {/* Requests & Master Records (Person 3) */}
+            <div className="nav-section-title" style={{ marginTop: '1.25rem' }}>
+              Hospitals & Requests (P3)
+            </div>
+            <NavLink to="/hospitals" className={navClass}>
+              <span className="nav-link-icon">🏨</span>Hospitals
+            </NavLink>
+            <NavLink to="/recipients" className={navClass}>
+              <span className="nav-link-icon">🫀</span>Recipients
+            </NavLink>
+            <NavLink to="/requests" className={navClass}>
+              <span className="nav-link-icon">📋</span>Blood Requests
+            </NavLink>
+
+            {/* Fulfilment & Issues (Person 4) */}
+            <div className="nav-section-title" style={{ marginTop: '1.25rem' }}>
+              Fulfilment & Audit (P4)
+            </div>
+            <NavLink to="/issues" className={navClass}>
+              <span className="nav-link-icon">💉</span>Issue Log
+            </NavLink>
+          </nav>
+
+          <div className="sidebar-user">
+            <div className="sidebar-user-name">DBMS Portal</div>
+            <div className="sidebar-user-role" style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span style={{ fontSize: '0.65rem' }}>●</span> Open Access Mode
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Main Content Area ───────────────────────────────────── */}
+        <main className="main-content">
+          <Routes>
+            {/* Direct Bank Page as default landing page */}
+            <Route path="/" element={<Navigate to="/banks" replace />} />
+
+            {/* P2 – Blood Banks & Cold Storage Inventory */}
+            <Route path="/banks" element={<BankList />} />
+            <Route path="/inventory" element={<InventoryDashboard />} />
+            <Route path="/sweep" element={<ExpirySweepAction />} />
+
+            {/* Overview Dashboard */}
+            <Route path="/dashboard" element={<ExecutiveDashboard />} />
+
+            {/* P1 – Donors & Donations */}
+            <Route path="/donors" element={<DonorList />} />
+            <Route path="/donors/:id" element={<DonorDetail />} />
+
+            {/* P3 – Hospitals, Recipients, Blood Requests */}
+            <Route path="/hospitals" element={<P3Manager type="hospitals" />} />
+            <Route path="/recipients" element={<P3Manager type="recipients" />} />
+            <Route path="/requests" element={<P3Manager type="requests" />} />
+
+            {/* P4 – Issues & Allocation */}
+            <Route path="/issues" element={<IssueLog />} />
+
+            {/* Catch-all redirect to /banks */}
+            <Route path="*" element={<Navigate to="/banks" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }

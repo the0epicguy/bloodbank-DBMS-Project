@@ -41,12 +41,33 @@ class Forbidden(HTTPException):
 
 def register_exception_handlers(app):
     """Register global exception handlers on the FastAPI app."""
+    import logging
     from fastapi import Request
+    from fastapi.exceptions import RequestValidationError
     from fastapi.responses import JSONResponse
+
+    logger = logging.getLogger("uvicorn.error")
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=getattr(exc, "headers", None),
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": exc.errors()},
+        )
 
     @app.exception_handler(Exception)
     async def generic_handler(request: Request, exc: Exception):
+        logger.exception(f"Unhandled error processing {request.method} {request.url.path}: {exc}")
         return JSONResponse(
             status_code=500,
-            content={"detail": "An unexpected internal server error occurred."},
+            content={"detail": str(exc) if getattr(exc, "detail", None) is None else getattr(exc, "detail")},
         )
+
