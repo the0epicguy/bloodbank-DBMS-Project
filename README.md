@@ -333,102 +333,25 @@ Person 1 (me)                    Person 2 (will replace)
 
 ---
 
-## 📊 Complete ER Diagram & Table Mapping
+## 📊 ER Diagram → Table Mapping
 
-### Visual ER Diagram (Mermaid)
+| ER Entity | Table | PK | Notes |
+|-----------|-------|-----|-------|
+| DONOR | `donor` | `donor_id` (auto) | Strong entity |
+| BLOOD BANK | `blood_bank` | `bank_id` (auto) | Strong entity |
+| BLOOD UNIT | `blood_unit` | `(bank_id, unit_id)` composite | **Weak entity** — unit_id is partial key |
+| HOSPITAL | `hospital` | `hospital_id` (auto) | Strong entity |
+| RECIPIENT | `recipient` | `recipient_id` (auto) | Strong entity |
+| REQUEST | `request` | `request_id` (auto) | Strong entity |
+| ISSUE | `issue` | `issue_id` (auto) | Associative entity linking request ↔ blood_unit |
 
-```mermaid
-erDiagram
-    HOSPITAL ||--o{ REQUEST : "raises (1:N)"
-    RECIPIENT ||--o{ REQUEST : "submits (1:N)"
-    DONOR ||--o{ BLOOD_UNIT : "donates (1:N)"
-    BLOOD_BANK ||--|{ BLOOD_UNIT : "identifies / stores (1:N identifying)"
-    REQUEST ||--o{ ISSUE : "fulfilled by (1:N)"
-    BLOOD_UNIT ||--o{ ISSUE : "allocated to (1:N)"
-
-    HOSPITAL {
-        int hospital_id PK "Primary Key"
-        string name "Hospital Name"
-        text address "Physical Address"
-        string contact "Contact Phone"
-    }
-
-    RECIPIENT {
-        int recipient_id PK "Primary Key"
-        string name "Patient / Recipient Name"
-        int age "Age (0 - 120)"
-        string blood_group "Blood Group (A+, B+, etc.)"
-    }
-
-    DONOR {
-        int donor_id PK "Primary Key"
-        string name "Donor Name"
-        string blood_group "Blood Group"
-        string phone UK "Unique Phone Number"
-        date dob "Date of Birth (18-65 rule)"
-        date last_donation_date "Last Donation (90-day gap)"
-    }
-
-    BLOOD_BANK {
-        int bank_id PK "Primary Key"
-        string name "Bank Name"
-        text address "Location"
-        string contact "Bank Contact"
-    }
-
-    BLOOD_UNIT {
-        int bank_id PK "Composite PK / FK to blood_bank"
-        int unit_id PK "Partial Key (counter per bank)"
-        int donor_id FK "FK to donor"
-        int volume_ml "Volume collected (50-600 ml)"
-        date donation_date "Date donated"
-        string blood_group "Blood Group"
-        string component_type "WHOLE_BLOOD / RBC / PLATELETS / PLASMA"
-        date collection_date "Collection Date"
-        date expiry_date "Computed Expiry Date"
-        string status "AVAILABLE / RESERVED / ISSUED / EXPIRED"
-    }
-
-    REQUEST {
-        int request_id PK "Primary Key"
-        int hospital_id FK "FK to hospital"
-        int recipient_id FK "References recipient"
-        string component_type "Requested Component"
-        int quantity "Units needed"
-        string urgency "ROUTINE / URGENT / EMERGENCY"
-        date request_date "Date requested"
-        string status "PENDING / PARTIAL / FULFILLED / CANCELLED"
-    }
-
-    ISSUE {
-        int issue_id PK "Primary Key"
-        int request_id FK "FK to request"
-        int bank_id FK "Composite FK to blood_unit"
-        int unit_id FK "Composite FK to blood_unit"
-        date issue_date "Issue Date"
-        int quantity_issued "Quantity issued"
-    }
-```
-
-### ER Entities Breakdown & Schema Notes
-
-| ER Entity | Entity Type | Primary Key (PK) | Foreign Keys (FK) | Notes & Constraints |
-|-----------|-------------|------------------|-------------------|---------------------|
-| **DONOR** | Strong | `donor_id` (Auto-increment) | None | `phone` is UNIQUE. Age checked via `dob` (18-65). `last_donation_date` for 90-day cooldown. |
-| **BLOOD BANK** | Strong | `bank_id` (Auto-increment) | None | Physical blood bank facility. |
-| **BLOOD UNIT** | **Weak Entity** | `(bank_id, unit_id)` Composite PK | `bank_id` → `blood_bank`, `donor_id` → `donor` | `unit_id` is a **partial key** (per-bank counter). Identified by `bank_id`. Volume between 50-600 ml. |
-| **HOSPITAL** | Strong | `hospital_id` (Auto-increment) | None | Medical institution requesting blood. |
-| **RECIPIENT** | Strong | `recipient_id` (Auto-increment) | None | Patient requiring blood. Age 0-120. |
-| **REQUEST** | Strong | `request_id` (Auto-increment) | `hospital_id`, `recipient_id` | Raised by hospital for recipient. Status: PENDING / PARTIALLY_FULFILLED / FULFILLED / CANCELLED. |
-| **ISSUE** | Associative / Linking | `issue_id` (Auto-increment) | `request_id`, `(bank_id, unit_id)` | Connects a specific REQUEST to the allocated BLOOD UNIT. |
-
-### Relationships & Cardinalities:
-1. **DONOR donates BLOOD_UNIT (1:N)**: A donor can donate multiple blood units over time. Each unit comes from exactly 1 donor.
-2. **BLOOD_BANK stores / identifies BLOOD_UNIT (1:N identifying)**: A blood bank contains multiple units. A unit cannot exist without its bank (identifying relationship).
-3. **HOSPITAL raises REQUEST (1:N)**: A hospital can raise multiple blood requests.
-4. **RECIPIENT has REQUEST (1:N)**: A recipient patient can have multiple requests.
-5. **REQUEST fulfilled by ISSUE (1:N)**: A request can be fulfilled by 1 or more unit issues (supporting partial fulfilment).
-6. **BLOOD_UNIT allocated in ISSUE (1:N)**: A unit is linked to an issue record upon distribution.
+### Relationships:
+- **DONOR donates BLOOD_UNIT** → `blood_unit.donor_id` references `donor.donor_id` (1:N)
+- **BLOOD_BANK has BLOOD_UNIT** → `blood_unit.bank_id` references `blood_bank.bank_id` (1:N, identifying)
+- **HOSPITAL raises REQUEST** → `request.hospital_id` references `hospital.hospital_id` (1:N)
+- **RECIPIENT has REQUEST** → `request.recipient_id` references `recipient.recipient_id` (1:N)
+- **REQUEST fulfilled by ISSUE** → `issue.request_id` references `request.request_id` (1:N)
+- **BLOOD_UNIT issued in ISSUE** → `issue.(bank_id, unit_id)` references `blood_unit.(bank_id, unit_id)` (1:N)
 
 ---
 

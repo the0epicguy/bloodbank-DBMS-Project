@@ -123,7 +123,7 @@ export default function DonorDetail() {
       {/* Back button */}
       <button
         className="btn btn-secondary"
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/donors')}
         style={{ marginBottom: 'var(--space-6)' }}
       >
         ← Back to List

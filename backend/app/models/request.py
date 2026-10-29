@@ -1,74 +1,36 @@
+"""
+Request ORM model (a hospital asks for blood for a recipient).
 
-from sqlalchemy import (
-    Column,
-    Integer,
-    Date,
-    Enum,
-    ForeignKey,
-    CheckConstraint,
-    text,
-)
+NOTE (integration): owned by Person 3. Minimal version matching
+db/migrations/001 so Person 4's FEFO allocation can run on its own.
+The blood group needed is the RECIPIENT's blood group.
+"""
+
+from sqlalchemy import Column, Integer, Date, Enum, ForeignKey
 from sqlalchemy.orm import relationship
-
 from app.core.database import Base
-from app.core.enums import ComponentType, Urgency, RequestStatus
 
 
 class Request(Base):
     __tablename__ = "request"
 
-    __table_args__ = (
-        CheckConstraint("quantity > 0", name="ck_request_quantity"),
-    )
-
     request_id = Column(Integer, primary_key=True, autoincrement=True)
-
-    hospital_id = Column(
-        Integer,
-        ForeignKey("hospital.hospital_id"),
-        nullable=False,
-    )
-    recipient_id = Column(
-        Integer,
-        ForeignKey("recipient.recipient_id"),
-        nullable=False,
-    )
-
+    hospital_id = Column(Integer, ForeignKey("hospital.hospital_id"), nullable=False)
+    recipient_id = Column(Integer, ForeignKey("recipient.recipient_id"), nullable=False)
     component_type = Column(
-        Enum(
-            ComponentType,
-            values_callable=lambda enum_cls: [item.value for item in enum_cls],
-            name="component_type",
-        ),
+        Enum("WHOLE_BLOOD", "RBC", "PLATELETS", "PLASMA", name="component_request_enum"),
         nullable=False,
     )
     quantity = Column(Integer, nullable=False)
-
     urgency = Column(
-        Enum(
-            Urgency,
-            values_callable=lambda enum_cls: [item.value for item in enum_cls],
-            name="urgency",
-        ),
-        nullable=False,
-        server_default="ROUTINE",
+        Enum("ROUTINE", "URGENT", "EMERGENCY", name="urgency_enum"),
+        nullable=False, default="ROUTINE",
     )
-
-    request_date = Column(
-        Date,
-        nullable=False,
-        server_default=text("CURRENT_DATE"),
-    )
-
+    request_date = Column(Date, nullable=False)
     status = Column(
-        Enum(
-            RequestStatus,
-            values_callable=lambda enum_cls: [item.value for item in enum_cls],
-            name="request_status",
-        ),
-        nullable=False,
-        server_default="PENDING",
+        Enum("PENDING", "PARTIALLY_FULFILLED", "FULFILLED", "CANCELLED", name="request_status_enum"),
+        nullable=False, default="PENDING",
     )
 
-    hospital = relationship("Hospital", back_populates="requests")
-    recipient = relationship("Recipient", back_populates="requests")
+    hospital = relationship("Hospital", lazy="select")
+    recipient = relationship("Recipient", lazy="select")

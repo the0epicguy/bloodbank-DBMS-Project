@@ -1,123 +1,63 @@
 """
-﻿"""
-core/compatibility.py
-=====================
-ABO / Rh Transfusion Compatibility Engine.
+ABO/Rh transfusion compatibility rules.
 
-Medical rules:
-  - RBC / Whole Blood: donor antigens must be absent from recipient's plasma.
-    Universal donor = O-  | Universal recipient = AB+
-  - Plasma:           reverse ABO logic — donor antibodies must not attack recipient.
-  - Plasma:           reverse ABO logic ΓÇö donor antibodies must not attack recipient.
-    Universal donor = AB+ | Universal recipient = O-
-  - Platelets:        preferably same group; falls back to RBC compatibility.
+NOTE (integration): this file is owned by Person 2 in the plan. It is included
+here because Person 4's FEFO allocation needs it. If Person 2 already has a
+version, keep THEIR file and just make sure it exposes
+`get_compatible_donor_groups(recipient_group, component)`.
 
-Usage:
-    from app.core.compatibility import get_compatible_donor_groups
-    groups = get_compatible_donor_groups(BloodGroup.A_POS, ComponentType.RBC)
-    # → ["O-", "O+", "A-", "A+"]
-    # ΓåÆ ["O-", "O+", "A-", "A+"]
+Maps: recipient blood group -> list of donor blood groups that may be given.
 """
 
-from app.core.enums import BloodGroup, ComponentType
-
-
-# ---------------------------------------------------------------------------
-# Raw compatibility tables (recipient → list of compatible donor groups)
-# Raw compatibility tables (recipient ΓåÆ list of compatible donor groups)
-# ---------------------------------------------------------------------------
-
-# RBC and Whole Blood: standard donor-to-recipient compatibility
-_RBC_COMPAT: dict[BloodGroup, list[BloodGroup]] = {
-    BloodGroup.O_NEG:  [BloodGroup.O_NEG],
-    BloodGroup.O_POS:  [BloodGroup.O_NEG, BloodGroup.O_POS],
-    BloodGroup.A_NEG:  [BloodGroup.O_NEG, BloodGroup.A_NEG],
-    BloodGroup.A_POS:  [BloodGroup.O_NEG, BloodGroup.O_POS,
-                        BloodGroup.A_NEG, BloodGroup.A_POS],
-    BloodGroup.B_NEG:  [BloodGroup.O_NEG, BloodGroup.B_NEG],
-    BloodGroup.B_POS:  [BloodGroup.O_NEG, BloodGroup.O_POS,
-                        BloodGroup.B_NEG, BloodGroup.B_POS],
-    BloodGroup.AB_NEG: [BloodGroup.O_NEG, BloodGroup.A_NEG,
-                        BloodGroup.B_NEG, BloodGroup.AB_NEG],
-    BloodGroup.AB_POS: [BloodGroup.O_NEG, BloodGroup.O_POS,
-                        BloodGroup.A_NEG, BloodGroup.A_POS,
-                        BloodGroup.B_NEG, BloodGroup.B_POS,
-                        BloodGroup.AB_NEG, BloodGroup.AB_POS],  # Universal recipient
+RBC_COMPATIBILITY = {
+    "O-":  ["O-"],
+    "O+":  ["O-", "O+"],
+    "A-":  ["O-", "A-"],
+    "A+":  ["O-", "O+", "A-", "A+"],
+    "B-":  ["O-", "B-"],
+    "B+":  ["O-", "O+", "B-", "B+"],
+    "AB-": ["O-", "A-", "B-", "AB-"],
+    "AB+": ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"],  # universal recipient
 }
 
-# Plasma: reverse ABO — recipient needs plasma without anti-A or anti-B antibodies
-# AB+ plasma (no antibodies) → universal donor.  O- plasma → only for O-.
-# Plasma: reverse ABO ΓÇö recipient needs plasma without anti-A or anti-B antibodies
-# AB+ plasma (no antibodies) ΓåÆ universal donor.  O- plasma ΓåÆ only for O-.
-_PLASMA_COMPAT: dict[BloodGroup, list[BloodGroup]] = {
-    BloodGroup.O_NEG:  [BloodGroup.O_NEG, BloodGroup.O_POS,
-                        BloodGroup.A_NEG, BloodGroup.A_POS,
-                        BloodGroup.B_NEG, BloodGroup.B_POS,
-                        BloodGroup.AB_NEG, BloodGroup.AB_POS],  # Universal plasma recipient
-    BloodGroup.O_POS:  [BloodGroup.O_POS, BloodGroup.A_POS,
-                        BloodGroup.B_POS, BloodGroup.AB_POS],
-    BloodGroup.A_NEG:  [BloodGroup.A_NEG, BloodGroup.A_POS,
-                        BloodGroup.AB_NEG, BloodGroup.AB_POS],
-    BloodGroup.A_POS:  [BloodGroup.A_POS, BloodGroup.AB_POS],
-    BloodGroup.B_NEG:  [BloodGroup.B_NEG, BloodGroup.B_POS,
-                        BloodGroup.AB_NEG, BloodGroup.AB_POS],
-    BloodGroup.B_POS:  [BloodGroup.B_POS, BloodGroup.AB_POS],
-    BloodGroup.AB_NEG: [BloodGroup.AB_NEG, BloodGroup.AB_POS],
-    BloodGroup.AB_POS: [BloodGroup.AB_POS],  # Universal plasma donor
+# Plasma follows the reverse ABO logic.
+PLASMA_COMPATIBILITY = {
+    "O-":  ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"],
+    "O+":  ["O+", "A+", "B+", "AB+"],
+    "A-":  ["A-", "A+", "AB-", "AB+"],
+    "A+":  ["A+", "AB+"],
+    "B-":  ["B-", "B+", "AB-", "AB+"],
+    "B+":  ["B+", "AB+"],
+    "AB-": ["AB-", "AB+"],
+    "AB+": ["AB+"],  # universal plasma donor
 }
 
-# Platelets: ideally same-group; fall back to RBC compatibility
-_PLATELETS_COMPAT: dict[BloodGroup, list[BloodGroup]] = _RBC_COMPAT
+# Platelets / whole blood use the red-cell table (as defined in the project plan).
+PLATELETS_COMPATIBILITY = RBC_COMPATIBILITY
+WHOLE_BLOOD_COMPATIBILITY = RBC_COMPATIBILITY
+
+_TABLES = {
+    "RBC": RBC_COMPATIBILITY,
+    "WHOLE_BLOOD": WHOLE_BLOOD_COMPATIBILITY,
+    "PLATELETS": PLATELETS_COMPATIBILITY,
+    "PLASMA": PLASMA_COMPATIBILITY,
+}
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+def _val(x) -> str:
+    """Accept plain strings or str-Enums (BloodGroup / ComponentType)."""
+    return x.value if hasattr(x, "value") else str(x)
 
-def get_compatible_donor_groups(
-    recipient_group: BloodGroup,
-    component: ComponentType,
-) -> list[BloodGroup]:
+
+def get_compatible_donor_groups(recipient_group, component) -> list[str]:
     """
-    Return a list of donor blood groups whose units can safely be transfused
-    to a recipient of *recipient_group* for the given *component*.
-
-    Used by:
-      - Person 4 (issue_service) for FEFO query filtering.
-      - Person 3 (request_service) for validation.
+    Which donor blood groups can safely be given to this recipient
+    for this component?   e.g. ("A+", "RBC") -> ["O-", "O+", "A-", "A+"]
     """
-    if component == ComponentType.PLASMA:
-        return _PLASMA_COMPAT[recipient_group]
-    if component == ComponentType.PLATELETS:
-        return _PLATELETS_COMPAT[recipient_group]
-    # WHOLE_BLOOD and RBC use the same table
-    return _RBC_COMPAT[recipient_group]
+    table = _TABLES[_val(component)]
+    return list(table[_val(recipient_group)])
 
 
-def is_compatible(
-    donor_group: BloodGroup,
-    recipient_group: BloodGroup,
-    component: ComponentType,
-) -> bool:
-    """
-    Return True if a unit with *donor_group* can be given to *recipient_group*
-    for the specified *component*.
-    """
-    return donor_group in get_compatible_donor_groups(recipient_group, component)
-
-
-# ---------------------------------------------------------------------------
-# Full 64-pair matrix (for tests & documentation)
-# ---------------------------------------------------------------------------
-
-def build_full_matrix() -> dict[tuple[BloodGroup, ComponentType], list[BloodGroup]]:
-    """
-    Build and return the full (recipient_group, component) → [donor_groups] matrix.
-    Build and return the full (recipient_group, component) ΓåÆ [donor_groups] matrix.
-    Useful for test coverage verification.
-    """
-    matrix: dict[tuple[BloodGroup, ComponentType], list[BloodGroup]] = {}
-    for group in BloodGroup:
-        for component in ComponentType:
-            matrix[(group, component)] = get_compatible_donor_groups(group, component)
-    return matrix
+def is_compatible(recipient_group, unit_group, component) -> bool:
+    """True if a unit of `unit_group` can be given to `recipient_group`."""
+    return _val(unit_group) in get_compatible_donor_groups(recipient_group, component)
