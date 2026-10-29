@@ -1,74 +1,75 @@
 """
-FastAPI application entry point.
+app/main.py  —  Blood Bank Management System
+=============================================
+Unified entry point — registers all 4 team members' routers.
 
-This file:
-    1. Creates the FastAPI app instance
-    2. Configures CORS middleware
-    3. Registers all routers
-    4. Provides a health-check endpoint
-
-Run with:
-    uvicorn app.main:app --reload
+Person 1 (Om):     /donors, /donations
+Person 2 (Advait): /api/v1/banks, /api/v1/inventory
+Person 3 (Bhoomi): /hospitals, /recipients, /requests
+Person 4:          /auth, /issues, /reports
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
 
-# Create the FastAPI application
-app = FastAPI(
-    title="Blood Bank Management System",
-    description="API for managing blood donations, inventory, and requests",
-    version="1.0.0",
+from app.core.config import settings
+from app.core.errors import register_exception_handlers
+from app.routers import (
+    # P1
+    donors, donations,
+    # P2
+    banks, inventory,
+    # P3
+    hospitals, recipients, requests,
+    # P4
+    auth, issues, reports,
 )
 
-# Configure CORS — allows the React frontend to call the API
+app = FastAPI(
+    title=settings.APP_TITLE,
+    version=settings.APP_VERSION,
+    description="Blood Bank Management System — 4-person DBMS project.",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# ── CORS ────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],    # GET, POST, PUT, DELETE, etc.
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ── Exception handlers ───────────────────────────────────────────────────────
+register_exception_handlers(app)
 
-@app.get("/", tags=["Health"])
-def root():
-    """Health check endpoint."""
-    return {"status": "ok", "message": "Blood Bank API is running"}
-
-
-@app.get("/health", tags=["Health"])
-def health_check():
-    """Detailed health check."""
-    return {
-        "status": "healthy",
-        "database": settings.DB_HOST,
-        "debug": settings.APP_DEBUG,
-    }
-
-
-# ---- Router Registration ----
-# Routers are imported and included here.
-# As each person adds their routers, they add an include line below.
-
-# Person 1: Donors and Donations
-from app.routers import donors, donations
+# ── Person 1: Donors & Donations ─────────────────────────────────────────────
 app.include_router(donors.router)
 app.include_router(donations.router)
 
-# Person 2: Banks and Units (uncomment when ready)
-# from app.routers import banks, units
-# app.include_router(banks.router)
-# app.include_router(units.router)
+# ── Person 2: Blood Banks & Inventory ────────────────────────────────────────
+app.include_router(banks.router)
+app.include_router(inventory.router)
 
-# Person 3: Hospitals, Recipients, Requests (uncomment when ready)
-# from app.routers import hospitals, recipients, requests
-# app.include_router(hospitals.router)
-# app.include_router(recipients.router)
-# app.include_router(requests.router)
+# ── Person 3: Hospitals, Recipients & Requests ───────────────────────────────
+app.include_router(hospitals.router)
+app.include_router(recipients.router)
+app.include_router(requests.router)
 
-# Person 4: Issues and Reports (uncomment when ready)
-# from app.routers import issues, reports
-# app.include_router(issues.router)
-# app.include_router(reports.router)
+# ── Person 4: Auth, Issues & Reports ────────────────────────────────────────
+app.include_router(auth.router)
+app.include_router(issues.router)
+app.include_router(reports.router)
+
+
+# ── Health ───────────────────────────────────────────────────────────────────
+@app.get("/", tags=["health"])
+def health_check():
+    return {"status": "ok", "app": settings.APP_TITLE, "version": settings.APP_VERSION}
+
+
+@app.get("/health", tags=["health"])
+def health():
+    return {"status": "ok"}

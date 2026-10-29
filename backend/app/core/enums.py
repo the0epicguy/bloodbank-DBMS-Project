@@ -1,8 +1,6 @@
 """
-Enum definitions shared across the application.
-
-These Python enums mirror the MySQL ENUM columns in the schema.
-They are used in SQLAlchemy models and Pydantic schemas for type safety.
+Enum definitions shared across the entire Blood Bank Management System.
+Mirrors the MySQL 8.0 schema ENUM columns and supports both string and Enum access.
 """
 
 import enum
@@ -44,9 +42,34 @@ class Urgency(str, enum.Enum):
     EMERGENCY = "EMERGENCY"
 
 
+# Alias for compatibility with Person 2 & 4 schemas
+UrgencyLevel = Urgency
+
+
 class RequestStatus(str, enum.Enum):
     """Request fulfilment status."""
     PENDING = "PENDING"
     PARTIALLY_FULFILLED = "PARTIALLY_FULFILLED"
     FULFILLED = "FULFILLED"
     CANCELLED = "CANCELLED"
+
+
+class UserRole(str, enum.Enum):
+    """RBAC user roles."""
+    ADMIN = "ADMIN"
+    BANK_STAFF = "BANK_STAFF"
+    HOSPITAL_STAFF = "HOSPITAL_STAFF"
+    DONOR = "DONOR"
+
+
+# Medical shelf-life standards (in days from collection date)
+SHELF_LIFE_DAYS = {
+    ComponentType.WHOLE_BLOOD: 35,
+    ComponentType.RBC: 35,
+    ComponentType.PLATELETS: 5,
+    ComponentType.PLASMA: 365,
+    "WHOLE_BLOOD": 35,
+    "RBC": 35,
+    "PLATELETS": 5,
+    "PLASMA": 365,
+}
